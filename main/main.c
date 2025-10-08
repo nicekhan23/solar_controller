@@ -41,6 +41,9 @@ static channel_config_t ch1_config;
 
 /**
  * @brief Print system information
+ * 
+ * Displays chip information including model, core count, features,
+ * silicon revision, flash type, and available heap memory.
  */
 static void print_system_info(void)
 {
@@ -65,6 +68,15 @@ static void print_system_info(void)
 
 /**
  * @brief Initialize all subsystems
+ * 
+ * Performs sequential initialization of:
+ * 1. NVS storage and configuration
+ * 2. ADC sampling
+ * 3. Channel processors
+ * 4. Hardware control
+ * 5. CLI console
+ * 
+ * Also loads and increments boot counter.
  */
 static void initialize_subsystems(void)
 {
@@ -106,6 +118,9 @@ static void initialize_subsystems(void)
 
 /**
  * @brief Configure channels from NVS settings
+ * 
+ * Populates channel configuration structures with values
+ * loaded from NVS storage for use by channel processing tasks.
  */
 static void configure_channels(void)
 {
@@ -132,6 +147,13 @@ static void configure_channels(void)
 
 /**
  * @brief Create all application tasks
+ * 
+ * Creates FreeRTOS tasks with appropriate priorities and stack sizes:
+ * - ADC sampling task (priority 5)
+ * - Channel 0 processor (priority 4)
+ * - Channel 1 processor (priority 4)
+ * - Hardware control task (priority 5)
+ * - CLI console task (priority 3)
  */
 static void create_tasks(void)
 {
@@ -217,7 +239,14 @@ static void create_tasks(void)
 
 /**
  * @brief Periodic uptime update task
- * Updates verification data every hour
+ * @param pvParameters Task parameters (unused)
+ * 
+ * Updates verification data every hour:
+ * - Increments uptime counter
+ * - Records current battery voltage
+ * - Saves data to NVS for persistence
+ * 
+ * @note Low priority background task
  */
 static void uptime_task(void *pvParameters)
 {
@@ -249,6 +278,14 @@ static void uptime_task(void *pvParameters)
 
 /**
  * @brief Watchdog task - monitors system health
+ * @param pvParameters Task parameters (unused)
+ * 
+ * Periodically checks:
+ * - Available heap memory (warns if < 10KB)
+ * - Battery voltage (warns if low, error if critical)
+ * - Logs health status every 5 minutes
+ * 
+ * @note Could be extended to trigger emergency actions on critical conditions
  */
 static void watchdog_task(void *pvParameters)
 {
@@ -289,6 +326,14 @@ static void watchdog_task(void *pvParameters)
 
 /**
  * @brief Main application entry point
+ * 
+ * System startup sequence:
+ * 1. Print system information
+ * 2. Initialize all subsystems
+ * 3. Configure channels from NVS
+ * 4. Create application tasks
+ * 5. Create monitoring tasks (uptime, watchdog)
+ * 6. Transfer control to FreeRTOS scheduler
  */
 void app_main(void)
 {
