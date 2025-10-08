@@ -5,7 +5,6 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_chip_info.h"
-#include "esp_flash.h"
 #include "nvs_flash.h"
 
 // Application modules
@@ -58,10 +57,8 @@ static void print_system_info(void)
            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
     printf("Silicon Revision: %d\n", chip_info.revision);
-    printf("Flash: %dMB %s\n",
-           spi_flash_get_chip_size() / (1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-    printf("Free heap: %d bytes\n", (int)esp_get_free_heap_size());
+    printf("Flash: %s\n", (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    printf("Free heap: %lu bytes\n", (unsigned long)esp_get_free_heap_size());
     printf("========================================\n");
     printf("\n");
 }

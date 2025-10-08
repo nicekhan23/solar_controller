@@ -436,9 +436,9 @@ void cli_init(void)
     setvbuf(stdin, NULL, _IONBF, 0);
     
     // Minicom, screen, idf_monitor send CR when ENTER key is pressed
-    uart_vfs_dev_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
+    esp_vfs_dev_uart_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
     // Move the caret to the beginning of the next line on '\n'
-    uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
+    esp_vfs_dev_uart_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
 
     // Configure UART
     const uart_config_t uart_config = {
@@ -452,7 +452,7 @@ void cli_init(void)
     ESP_ERROR_CHECK(uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config));
     
     // Tell VFS to use UART driver
-    uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
+    esp_vfs_dev_uart_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
     
     // Initialize console
     esp_console_config_t console_config = {

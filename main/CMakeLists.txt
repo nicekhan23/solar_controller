@@ -12,4 +12,6 @@ idf_component_register(
         driver
         nvs_flash
         console
+        log
+        esp_system
 )
