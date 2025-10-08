@@ -57,23 +57,23 @@ This document provides detailed wiring instructions for the Solar Battery Contro
                     ┌──────────────────┐
                     │                  │
               EN ───┤ 1             30 ├─── GPIO23
-          GPIO36 ───┤ 2   ESP32     29 ├─── GPIO22
-          GPIO39 ───┤ 3   WROOM-32  28 ├─── TX (GPIO1)
+       SENSOR VP ───┤ 2   ESP32     29 ├─── GPIO22
+       SENSOR VN ───┤ 3   WROOM-32  28 ├─── TX (GPIO1)
           GPIO34 ───┤ 4             27 ├─── RX (GPIO3)
           GPIO35 ───┤ 5             26 ├─── GPIO21
-          GPIO32 ───┤ 6             25 ├─── GND
-          GPIO33 ───┤ 7             24 ├─── GPIO19
-          GPIO25 ───┤ 8             23 ├─── GPIO18
-          GPIO26 ───┤ 9             22 ├─── GPIO5
-          GPIO27 ───┤10             21 ├─── GPIO17
-          GPIO14 ───┤11             20 ├─── GPIO16
-          GPIO12 ───┤12             19 ├─── GPIO4
-             GND ───┤13             18 ├─── GPIO0
-          GPIO13 ───┤14             17 ├─── GPIO2
-           GPIO9* ──┤15             16 ├─── GPIO15
+          GPIO32 ───┤ 6             25 ├─── GPIO19
+          GPIO33 ───┤ 7             24 ├─── GPIO18
+          GPIO25 ───┤ 8             23 ├─── GPIO5
+          GPIO26 ───┤ 9             22 ├─── TX2 (GPIO17)
+          GPIO27 ───┤10             21 ├─── RX2 (GPIO16)
+          GPIO14 ───┤11             20 ├─── GPIO4
+          GPIO12 ───┤12             19 ├─── GPIO2
+          GPIO13 ───┤13             18 ├─── GPIO15
+             GND ───┤14             17 ├─── GND
+              VIN ──┤15             16 ├─── 3V3
                     └──────────────────┘
                    
-* GPIO9-11 are used for flash, do not use
+* GPIO1, GPIO3, GPIO6-11 are used for flash, do not use
 ```
 
 ### Voltage Divider Circuit Details
