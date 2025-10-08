@@ -436,10 +436,10 @@ void cli_init(void)
     setvbuf(stdin, NULL, _IONBF, 0);
     
     // Minicom, screen, idf_monitor send CR when ENTER key is pressed
-    esp_vfs_dev_uart_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
+    uart_vfs_dev_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
     // Move the caret to the beginning of the next line on '\n'
-    esp_vfs_dev_uart_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
-    
+    uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
+
     // Configure UART
     const uart_config_t uart_config = {
         .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
@@ -452,13 +452,13 @@ void cli_init(void)
     ESP_ERROR_CHECK(uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config));
     
     // Tell VFS to use UART driver
-    esp_vfs_dev_uart_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
+    uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
     
     // Initialize console
     esp_console_config_t console_config = {
         .max_cmdline_length = 256,
         .max_cmdline_args = 8,
-        .hint_color = atoi(LOG_COLOR_CYAN)
+        .hint_color = atoi(LOG_COLOR_D)
     };
     ESP_ERROR_CHECK(esp_console_init(&console_config));
     
