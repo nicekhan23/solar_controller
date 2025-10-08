@@ -22,4 +22,16 @@ void control_task(void *pvParameters);
 // Mutex for hardware access
 extern SemaphoreHandle_t hw_mutex;
 
+// Get current hardware state
+void control_get_state(hw_control_t *state);
+
+// Manual motion trigger (testing)
+void control_trigger_motion(void);
+
+// Get charger status
+bool control_get_charger_status(void);
+
+// Emergency shutdown
+void control_emergency_shutdown(void);
+
 #endif

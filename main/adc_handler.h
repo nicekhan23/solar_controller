@@ -21,4 +21,11 @@ void adc_task(void *pvParameters);
 extern QueueHandle_t adc_queue_ch0;
 extern QueueHandle_t adc_queue_ch1;
 
+// Immediate (blocking) reads for status queries
+uint32_t adc_get_battery_voltage_now(void);
+float adc_get_temperature_now(void);
+
+// Cleanup
+void adc_deinit(void);
+
 #endif
