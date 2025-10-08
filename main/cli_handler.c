@@ -42,9 +42,9 @@ static int cmd_status(int argc, char **argv)
     int32_t ch0_voltage = channel_get_filtered_voltage(0);
     printf("Channel 0:\n");
     printf("  State: %s\n", ch0_state ? "ON" : "OFF");
-    printf("  Filtered Voltage: %d mV (%.2f V)\n", ch0_voltage, ch0_voltage / 1000.0f);
-    printf("  Threshold ON: %d mV\n", nvs_get_ch0_th_on());
-    printf("  Threshold OFF: %d mV\n", nvs_get_ch0_th_off());
+    printf("  Filtered Voltage: %ld mV (%.2f V)\n", ch0_voltage, ch0_voltage / 1000.0f);
+    printf("  Threshold ON: %ld mV\n", nvs_get_ch0_th_on());
+    printf("  Threshold OFF: %ld mV\n", nvs_get_ch0_th_off());
     printf("\n");
     
     // Channel 1 status
@@ -52,9 +52,9 @@ static int cmd_status(int argc, char **argv)
     int32_t ch1_voltage = channel_get_filtered_voltage(1);
     printf("Channel 1:\n");
     printf("  State: %s\n", ch1_state ? "ON" : "OFF");
-    printf("  Filtered Voltage: %d mV (%.2f V)\n", ch1_voltage, ch1_voltage / 1000.0f);
-    printf("  Threshold ON: %d mV\n", nvs_get_ch1_th_on());
-    printf("  Threshold OFF: %d mV\n", nvs_get_ch1_th_off());
+    printf("  Filtered Voltage: %ld mV (%.2f V)\n", ch1_voltage, ch1_voltage / 1000.0f);
+    printf("  Threshold ON: %ld mV\n", nvs_get_ch1_th_on());
+    printf("  Threshold OFF: %ld mV\n", nvs_get_ch1_th_off());
     printf("\n");
     
     // Hardware control state
@@ -223,7 +223,7 @@ static int cmd_motion(int argc, char **argv)
 {
     control_trigger_motion();
     printf("Motion detection triggered manually\n");
-    printf("Lights will stay at full brightness for %u seconds\n", 
+    printf("Lights will stay at full brightness for %lu seconds\n", 
            nvs_get_motion_timeout() / 1000);
     return 0;
 }
