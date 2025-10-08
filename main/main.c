@@ -23,10 +23,10 @@ static const char *TAG = "MAIN";
 #define PRIORITY_CLI        3
 
 // Task stack sizes (in words, not bytes)
-#define STACK_SIZE_ADC      2048
-#define STACK_SIZE_PROCESSOR 3072
-#define STACK_SIZE_CONTROL  2048
-#define STACK_SIZE_CLI      4096
+#define STACK_SIZE_ADC      4096  // Increased from 2048
+#define STACK_SIZE_PROCESSOR 4096  // Increased from 3072
+#define STACK_SIZE_CONTROL  4096  // Increased from 2048
+#define STACK_SIZE_CLI      8192  // Increased from 4096
 
 // Task handles
 static TaskHandle_t adc_task_handle = NULL;
@@ -337,6 +337,23 @@ static void watchdog_task(void *pvParameters)
  */
 void app_main(void)
 {
+    printf("\n\n=== BOOT START ===\n");
+    vTaskDelay(pdMS_TO_TICKS(100));  // Give time to print
+    
+    printf("Step 1: Before system info\n");
+    print_system_info();
+    
+    printf("Step 2: Before subsystems init\n");
+    initialize_subsystems();
+    
+    printf("Step 3: Before channel config\n");
+    configure_channels();
+    
+    printf("Step 4: Before task creation\n");
+    create_tasks();
+    
+    printf("Step 5: Boot complete\n");
+
     // Print system information
     print_system_info();
     

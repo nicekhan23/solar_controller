@@ -1,4 +1,5 @@
 #include "adc_handler.h"
+#include "test_config.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
@@ -7,6 +8,12 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
+
+/**
+ * @brief Modified ADC functions for testing with minimal hardware
+ * 
+ * Add these modifications to adc_handler.c when testing
+ */
 
 static const char *TAG = "ADC_HANDLER";
 
@@ -134,11 +141,20 @@ static uint32_t adc_read_voltage(adc_channel_t channel)
  */
 static uint32_t calculate_battery_voltage(uint32_t adc_mv)
 {
-    // Apply voltage divider ratio
-    float battery_v = ((float)adc_mv / 1000.0f) * DIVIDER_RATIO;
-    uint32_t battery_mv = (uint32_t)(battery_v * 1000.0f);
+#if TEST_MODE_ENABLED
+    // In test mode, map ADC voltage to simulated battery range
+    uint32_t battery_mv = test_map_voltage(adc_mv);
+    
+    ESP_LOGD(TAG, "TEST MODE: ADC=%umV -> Battery=%umV", 
+             (unsigned int)adc_mv, (unsigned int)battery_mv);
     
     return battery_mv;
+#else
+    // Production: Apply voltage divider ratio
+    float battery_v = ((float)adc_mv / 1000.0f) * DIVIDER_RATIO;
+    uint32_t battery_mv = (uint32_t)(battery_v * 1000.0f);
+    return battery_mv;
+#endif
 }
 
 /**
@@ -148,17 +164,25 @@ static uint32_t calculate_battery_voltage(uint32_t adc_mv)
  */
 static float calculate_temperature(uint32_t adc_mv)
 {
-    // Example for TMP36 sensor
-    // TMP36: 10mV per degree, 500mV at 0°C
+#if TEST_MODE_ENABLED
+    #if TEST_USE_FIXED_TEMP
+        // Fixed temperature for testing
+        return TEST_FIXED_TEMP_C;
+    #else
+        // Map ADC to temperature range
+        return test_map_temperature(adc_mv);
+    #endif
+#else
+    // Production: TMP36 sensor formula
     float temp_c = ((float)adc_mv - 500.0f) / 10.0f;
     
-    // Sanity check
     if (temp_c < -40.0f || temp_c > 125.0f) {
         ESP_LOGW(TAG, "Temperature out of range: %.1f°C, using 25°C", temp_c);
         temp_c = 25.0f;
     }
     
     return temp_c;
+#endif
 }
 
 /**
