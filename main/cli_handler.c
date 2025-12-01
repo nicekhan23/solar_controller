@@ -448,7 +448,14 @@ void cli_init(void)
         .stop_bits = UART_STOP_BITS_1,
         .source_clk = UART_SCLK_DEFAULT,
     };
-    ESP_ERROR_CHECK(uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0));
+
+    // FIXED: Check if already installed
+    esp_err_t ret = uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0);
+    if (ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "UART driver already installed, continuing...");
+    } else {
+        ESP_ERROR_CHECK(ret);  // Only check if not already installed
+    }
     ESP_ERROR_CHECK(uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config));
     
     // Tell VFS to use UART driver

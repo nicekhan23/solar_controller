@@ -207,8 +207,17 @@ void adc_init(void)
         .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
     
+    // FIXED: Check if ADC already initialized
     esp_err_t ret = adc_oneshot_new_unit(&init_config, &adc1_handle);
-    if (ret != ESP_OK) {
+    if (ret == ESP_ERR_NOT_FOUND || ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "ADC unit already initialized or in use, skipping init");
+        // Don't return - continue with channel configuration
+        // as handle might still be valid from previous init
+        if (adc1_handle == NULL) {
+            ESP_LOGE(TAG, "ADC handle is NULL, cannot continue");
+            return;
+        }
+    } else if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize ADC unit: %s", esp_err_to_name(ret));
         return;
     }

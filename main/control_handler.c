@@ -139,7 +139,15 @@ static void motion_sensor_init(void)
     gpio_config(&io_conf);
     
     // Install GPIO ISR service
-    gpio_install_isr_service(0);
+    // FIXED: Check if ISR service already installed
+    esp_err_t ret = gpio_install_isr_service(0);
+    if (ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "GPIO ISR service already installed");
+    } else if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install GPIO ISR service: %s", esp_err_to_name(ret));
+        return;
+    }
+
     gpio_isr_handler_add(GPIO_MOTION_SENSOR, motion_sensor_isr_handler, NULL);
     
     ESP_LOGI(TAG, "Motion sensor initialized");

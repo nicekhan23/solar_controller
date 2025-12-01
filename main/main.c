@@ -1,3 +1,7 @@
+/**
+ * @file main.c - Fixed version with proper cleanup
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -6,6 +10,8 @@
 #include "esp_log.h"
 #include "esp_chip_info.h"
 #include "nvs_flash.h"
+#include "driver/uart.h"
+#include "driver/gpio.h"
 
 // Application modules
 #include "nvs_storage.h"
@@ -22,7 +28,7 @@ static const char *TAG = "MAIN";
 #define PRIORITY_CONTROL    5
 #define PRIORITY_CLI        3
 
-// Task stack sizes (in words, not bytes)
+// Task stack sizes (INCREASED for stability)
 #define STACK_SIZE_ADC      4096  // Increased from 2048
 #define STACK_SIZE_PROCESSOR 4096  // Increased from 3072
 #define STACK_SIZE_CONTROL  4096  // Increased from 2048
@@ -34,16 +40,55 @@ static TaskHandle_t ch0_proc_task_handle = NULL;
 static TaskHandle_t ch1_proc_task_handle = NULL;
 static TaskHandle_t control_task_handle = NULL;
 static TaskHandle_t cli_task_handle = NULL;
+static TaskHandle_t uptime_task_handle = NULL;
+static TaskHandle_t watchdog_task_handle = NULL;
 
 // Channel configurations
 static channel_config_t ch0_config;
 static channel_config_t ch1_config;
 
+// Flag to track if system is already initialized
+static bool system_initialized = false;
+
+/**
+ * @brief Cleanup function to run before initialization
+ * Ensures clean state even if app_main runs multiple times
+ */
+static void cleanup_previous_state(void)
+{
+    if (!system_initialized) {
+        ESP_LOGI(TAG, "First boot, no cleanup needed");
+        return;
+    }
+    
+    ESP_LOGW(TAG, "Cleaning up previous initialization...");
+    
+    // Delete tasks if they exist
+    if (adc_task_handle) vTaskDelete(adc_task_handle);
+    if (ch0_proc_task_handle) vTaskDelete(ch0_proc_task_handle);
+    if (ch1_proc_task_handle) vTaskDelete(ch1_proc_task_handle);
+    if (control_task_handle) vTaskDelete(control_task_handle);
+    if (cli_task_handle) vTaskDelete(cli_task_handle);
+    if (uptime_task_handle) vTaskDelete(uptime_task_handle);
+    if (watchdog_task_handle) vTaskDelete(watchdog_task_handle);
+    
+    // Reset handles
+    adc_task_handle = NULL;
+    ch0_proc_task_handle = NULL;
+    ch1_proc_task_handle = NULL;
+    control_task_handle = NULL;
+    cli_task_handle = NULL;
+    uptime_task_handle = NULL;
+    watchdog_task_handle = NULL;
+    
+    // Small delay to let tasks clean up
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
+    ESP_LOGI(TAG, "Cleanup complete");
+}
+
 /**
  * @brief Print system information
- * 
- * Displays chip information including model, core count, features,
- * silicon revision, flash type, and available heap memory.
  */
 static void print_system_info(void)
 {
@@ -68,15 +113,6 @@ static void print_system_info(void)
 
 /**
  * @brief Initialize all subsystems
- * 
- * Performs sequential initialization of:
- * 1. NVS storage and configuration
- * 2. ADC sampling
- * 3. Channel processors
- * 4. Hardware control
- * 5. CLI console
- * 
- * Also loads and increments boot counter.
  */
 static void initialize_subsystems(void)
 {
@@ -118,9 +154,6 @@ static void initialize_subsystems(void)
 
 /**
  * @brief Configure channels from NVS settings
- * 
- * Populates channel configuration structures with values
- * loaded from NVS storage for use by channel processing tasks.
  */
 static void configure_channels(void)
 {
@@ -147,13 +180,6 @@ static void configure_channels(void)
 
 /**
  * @brief Create all application tasks
- * 
- * Creates FreeRTOS tasks with appropriate priorities and stack sizes:
- * - ADC sampling task (priority 5)
- * - Channel 0 processor (priority 4)
- * - Channel 1 processor (priority 4)
- * - Hardware control task (priority 5)
- * - CLI console task (priority 3)
  */
 static void create_tasks(void)
 {
@@ -239,23 +265,14 @@ static void create_tasks(void)
 
 /**
  * @brief Periodic uptime update task
- * @param pvParameters Task parameters (unused)
- * 
- * Updates verification data every hour:
- * - Increments uptime counter
- * - Records current battery voltage
- * - Saves data to NVS for persistence
- * 
- * @note Low priority background task
  */
 static void uptime_task(void *pvParameters)
 {
     verification_data_t verification;
-    uint32_t last_hour = 0;
     
     while (1) {
         // Wait 1 hour
-        vTaskDelay(pdMS_TO_TICKS(3600000));  // 1 hour in ms
+        vTaskDelay(pdMS_TO_TICKS(3600000));
         
         // Load current verification data
         nvs_load_verification(&verification);
@@ -269,7 +286,6 @@ static void uptime_task(void *pvParameters)
         // Save back to NVS
         nvs_save_verification(&verification);
         
-        last_hour++;
         ESP_LOGI(TAG, "Uptime: %u hours, Battery: %u mV",
                  (unsigned int)verification.uptime_hours,
                  (unsigned int)verification.last_voltage_mv);
@@ -278,19 +294,11 @@ static void uptime_task(void *pvParameters)
 
 /**
  * @brief Watchdog task - monitors system health
- * @param pvParameters Task parameters (unused)
- * 
- * Periodically checks:
- * - Available heap memory (warns if < 10KB)
- * - Battery voltage (warns if low, error if critical)
- * - Logs health status every 5 minutes
- * 
- * @note Could be extended to trigger emergency actions on critical conditions
  */
 static void watchdog_task(void *pvParameters)
 {
     uint32_t last_check = 0;
-    const uint32_t check_interval_ms = 60000;  // Check every minute
+    const uint32_t check_interval_ms = 60000;
     
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(check_interval_ms));
@@ -299,22 +307,20 @@ static void watchdog_task(void *pvParameters)
         
         // Check heap size
         uint32_t free_heap = esp_get_free_heap_size();
-        if (free_heap < 10000) {  // Less than 10KB free
+        if (free_heap < 10000) {
             ESP_LOGW(TAG, "Low heap warning: %u bytes free", (unsigned int)free_heap);
         }
         
         // Check battery voltage
         uint32_t battery_mv = adc_get_battery_voltage_now();
-        if (battery_mv < 10500) {  // Below 10.5V - critical
+        if (battery_mv < 10500) {
             ESP_LOGE(TAG, "CRITICAL: Battery voltage very low: %u mV", (unsigned int)battery_mv);
-            // Could trigger emergency shutdown here
-            // control_emergency_shutdown();
         } else if (battery_mv < 11000) {
             ESP_LOGW(TAG, "Warning: Battery voltage low: %u mV", (unsigned int)battery_mv);
         }
         
         // Log periodic health status
-        if ((now - last_check) > 300000) {  // Every 5 minutes
+        if ((now - last_check) > 300000) {
             ESP_LOGI(TAG, "Health check: heap=%u bytes, battery=%u mV, uptime=%u min",
                      (unsigned int)free_heap,
                      (unsigned int)battery_mv,
@@ -326,34 +332,12 @@ static void watchdog_task(void *pvParameters)
 
 /**
  * @brief Main application entry point
- * 
- * System startup sequence:
- * 1. Print system information
- * 2. Initialize all subsystems
- * 3. Configure channels from NVS
- * 4. Create application tasks
- * 5. Create monitoring tasks (uptime, watchdog)
- * 6. Transfer control to FreeRTOS scheduler
  */
 void app_main(void)
 {
-    printf("\n\n=== BOOT START ===\n");
-    vTaskDelay(pdMS_TO_TICKS(100));  // Give time to print
+    // Cleanup any previous state (in case of soft reset)
+    cleanup_previous_state();
     
-    printf("Step 1: Before system info\n");
-    print_system_info();
-    
-    printf("Step 2: Before subsystems init\n");
-    initialize_subsystems();
-    
-    printf("Step 3: Before channel config\n");
-    configure_channels();
-    
-    printf("Step 4: Before task creation\n");
-    create_tasks();
-    
-    printf("Step 5: Boot complete\n");
-
     // Print system information
     print_system_info();
     
@@ -377,7 +361,7 @@ void app_main(void)
         2048,
         NULL,
         2,
-        NULL
+        &uptime_task_handle
     );
     if (ret == pdPASS) {
         ESP_LOGI(TAG, "Uptime tracking task created");
@@ -390,18 +374,18 @@ void app_main(void)
         2048,
         NULL,
         2,
-        NULL
+        &watchdog_task_handle
     );
     if (ret == pdPASS) {
         ESP_LOGI(TAG, "Watchdog task created");
     }
+    
+    // Mark system as initialized
+    system_initialized = true;
     
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "  System Running");
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "Free heap: %d bytes", (int)esp_get_free_heap_size());
     ESP_LOGI(TAG, "Type 'help' in console for commands");
-    
-    // Main task is done, FreeRTOS scheduler is running
-    // All work happens in the created tasks
 }
